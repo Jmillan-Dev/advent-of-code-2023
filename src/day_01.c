@@ -88,18 +88,13 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    while ((read_size = getline(&line, &len, file) > -1))
+    while ((read_size = getline(&line, &len, file)) != -1)
     {
         result += string_to_integer(line);
     }
 
     free(line);
-
-    if (read_size == -1)
-    {
-        fprintf(stderr, "Error when reading the file");
-        return 1;
-    }
+    fclose(file);
 
     printf("%d\n", result);
 
