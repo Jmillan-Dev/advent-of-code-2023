@@ -11,83 +11,43 @@ struct bag_t
 };
 
 
-int check_game_id_sum(char * string, ssize_t len, struct bag_t * reference)
+int get_game_info(char * string, ssize_t len, struct bag_t * bag)
 {
     int game_id = 0,
-        value = 0;
+        value = 0,
+        read_size = 0;
 
-    ssize_t position = 0,
-            new_position = 0;
+    bag->red = 0;
+    bag->green = 0;
+    bag->blue = 0;
+
+    ssize_t position = 0;
 
     char * key = NULL;
 
-    struct bag_t game_bag = {0, 0, 0};
     sscanf(string, "Game %d:%n", &game_id, &position);
 
     while (position < len
-            && sscanf(string + position, " %d %m[a-zA-Z]%*s%n", &value, &key, &new_position) == 2)
+            && sscanf(string + position, " %d %m[a-zA-Z]%*s%n", &value, &key, &read_size) == 2)
     {
-        position = position + new_position;
+        position = position + read_size;
 
-        if (strcmp(key, "red") == 0 && value > game_bag.red) {
-            game_bag.red = value;
+        if (strcmp(key, "red") == 0 && value > bag->red) {
+            bag->red = value;
         }
-        else if (strcmp(key, "green") == 0 && value > game_bag.green) {
-            game_bag.green = value;
+        else if (strcmp(key, "green") == 0 && value > bag->green) {
+            bag->green = value;
         }
-        else if (strcmp(key, "blue") == 0 && value > game_bag.blue) {
-            game_bag.blue = value;
+        else if (strcmp(key, "blue") == 0 && value > bag->blue) {
+            bag->blue = value;
         }
 
         free(key);
         key = NULL;
     }
 
-    if ( game_bag.red <= reference->red
-            && game_bag.green <= reference->green
-            && game_bag.blue <= reference->blue )
-        return game_id;
-
-    return 0;
+    return game_id;
 }
-
-
-int check_game_min(char * string, ssize_t len)
-{
-    int game_id = 0,
-        value = 0;
-
-    ssize_t position = 0,
-            new_position = 0;
-
-    char * key = NULL;
-
-    struct bag_t game_bag = {0, 0, 0};
-
-    sscanf(string, "Game %d:%n", &game_id, &position);
-
-    while (position < len
-            && sscanf(string + position, " %d %m[a-zA-Z]%*s%n", &value, &key, &new_position) == 2)
-    {
-        position = position + new_position;
-
-        if (strcmp(key, "red") == 0 && value > game_bag.red) {
-            game_bag.red = value;
-        }
-        else if (strcmp(key, "green") == 0 && value > game_bag.green) {
-            game_bag.green = value;
-        }
-        else if (strcmp(key, "blue") == 0 && value > game_bag.blue) {
-            game_bag.blue = value;
-        }
-
-        free(key);
-        key = NULL;
-    }
-
-    return game_bag.red * game_bag.green * game_bag.blue;
-}
-
 
 
 int main(int argc, char **argv)
@@ -112,6 +72,8 @@ int main(int argc, char **argv)
         return 1;
     }
 
+    struct bag_t bag = {0, 0, 0};
+
     if (argc > 2)
     {
         if (argc < 5)
@@ -121,6 +83,7 @@ int main(int argc, char **argv)
             goto file_close;
         }
 
+        int game_id = 0;
         struct bag_t reference = {
             atoi(argv[2]),
             atoi(argv[3]),
@@ -129,14 +92,21 @@ int main(int argc, char **argv)
 
         while ((read_size = getline(&line, &len, file)) != -1)
         {
-            result += check_game_id_sum(line, read_size, &reference);
+            game_id = get_game_info(line, read_size, &bag);
+
+            if ( bag.red <= reference.red
+                && bag.green <= reference.green
+                && bag.blue <= reference.blue )
+                result += game_id;
         }
     }
     else
     {
-        while ((read_size=getline(&line, &len, file)) != -1)
+        while ((read_size = getline(&line, &len, file)) != -1)
         {
-            result += check_game_min(line, read_size);
+            get_game_info(line, read_size, &bag);
+
+            result += bag.red * bag.green * bag.blue;
         }
     }
 
