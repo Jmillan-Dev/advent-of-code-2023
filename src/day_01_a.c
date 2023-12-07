@@ -61,7 +61,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    printf("%d", result);
+    printf("%d\n", result);
 
     return 0;
 }
