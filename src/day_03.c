@@ -2,9 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define DOT -1
-#define OFFSETS 2787711040
-
 
 struct gear_t {
     int value;
