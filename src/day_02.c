@@ -25,7 +25,7 @@ int get_game_info(char * string, ssize_t len, struct bag_t * bag)
 
     char * key = NULL;
 
-    sscanf(string, "Game %d:%n", &game_id, &position);
+    sscanf(string, "Game %d:%ln", &game_id, &position);
 
     while (position < len
             && sscanf(string + position, " %d %m[a-zA-Z]%*s%n", &value, &key, &read_size) == 2)

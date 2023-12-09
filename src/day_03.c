@@ -145,7 +145,6 @@ int calc_line(
     int result = 0,
         value  = 0;
     struct symbol_t symbol = {'\0', 0, 0};
-    char found = '\0';
 
     for (ssize_t i = 0; i <= schema->width; i++)
     {
