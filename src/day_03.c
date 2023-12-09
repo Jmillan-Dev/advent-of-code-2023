@@ -58,7 +58,7 @@ int sum_block(ssize_t width, char * prev, char * current, char * next)
         value  = 0;
     short int found = 0;
 
-    for (ssize_t i = 0; i < width; i++)
+    for (ssize_t i = 0; i <= width; i++)
     {
         char c = current[i];
 
