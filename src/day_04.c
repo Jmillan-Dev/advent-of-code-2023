@@ -10,6 +10,21 @@ struct winning_number_t
 };
 
 
+struct scratchcard_t
+{
+    int matches;
+    int value;
+};
+
+
+struct scratchcard_container_t
+{
+    struct scratchcard_t * elements;
+    int size;
+    int capacity;
+};
+
+
 void add_winning_number(struct winning_number_t * winning, int value)
 {
     for (int i = 0; i < winning->size; i++)
@@ -40,7 +55,33 @@ int check_winning_number(struct winning_number_t * winning, int value)
 }
 
 
-int process_line(char * line, ssize_t len)
+int add_scratchcard(struct scratchcard_container_t * container, int matches)
+{
+    int value = 1;
+
+    if (container->size >= container->capacity)
+    {
+        container->capacity <<= 1;
+        container->elements = reallocarray(
+                container->elements, sizeof(struct scratchcard_t), container->capacity);
+    }
+
+    for (int i = 0; i < container->size; i++)
+    {
+        if (container->size <= i + container->elements[i].matches)
+            value += container->elements[i].value;
+    }
+
+    container->elements[container->size].matches = matches;
+    container->elements[container->size].value = value;
+
+    container->size++;
+
+    return value;
+}
+
+
+int sum_winning_numbers(char * line, ssize_t len)
 {
     int value = 0,
         result = 0,
@@ -76,10 +117,7 @@ int process_line(char * line, ssize_t len)
         position += new_position + 1;
 
         if (check_winning_number(&winning, value))
-        {
-            if (result == 0) result = 1;
-            else             result <<= 1;
-        }
+            result += 1;
     }
 
 free_numbers:
@@ -97,7 +135,9 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    int result = 0;
+    int result = 0,
+        mode = argc > 2,
+        winning_numbers = 0;
     char * line = NULL;
     size_t len = 0;
     ssize_t read_size;
@@ -110,9 +150,28 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    while ((read_size = getline(&line, &len, file)) != -1)
+    if (!mode)
     {
-        result += process_line(line, read_size);
+        while ((read_size = getline(&line, &len, file)) != -1)
+        {
+            winning_numbers = sum_winning_numbers(line, read_size);
+            if (winning_numbers > 0)
+                result += 1 << (winning_numbers - 1);
+        }
+    }
+    else
+    {
+        struct scratchcard_container_t container = {
+            malloc(sizeof(struct scratchcard_t)), 0, 1
+        };
+
+        while ((read_size = getline(&line, &len, file)) != -1)
+        {
+            winning_numbers = sum_winning_numbers(line, read_size);
+            result += add_scratchcard(&container, winning_numbers);
+        }
+
+        free(container.elements);
     }
 
     free(line);
