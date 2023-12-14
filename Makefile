@@ -4,7 +4,7 @@ RM	   = rm -f
 SRCDIR = ./src
 BINDIR = ./bin
 
-TARGETS = $(basename $(notdir $(wildcard src/*.c)))
+TARGETS = $(basename $(notdir $(wildcard src/day_*.c)))
 
 all: $(TARGETS)
 
