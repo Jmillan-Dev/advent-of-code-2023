@@ -1,11 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <limits.h>
+#include <pthread.h>
 
 
 #define SEED        0
 #define MAP_START   1
 #define MAP_ELEMENT 2
+#define THREAD_COUNT 16
 
 
 int string_starts_with(char * string, char * expected)
@@ -33,8 +35,6 @@ struct map_element_t
 
 struct map_t
 {
-    /* char * key_name */
-    /* char * key_target */
     char * name;
     struct map_element_t * elements;
     size_t size,
@@ -105,7 +105,7 @@ int state_get_lowest_destination(struct state_t * state)
 
     for (size_t seed_i = 0; seed_i < state->seed_size; seed_i++)
     {
-        int value = state->seeds[seed_i];
+        unsigned int value = state->seeds[seed_i];
 
         for (size_t map_i = 0; map_i < state->map_size; map_i++)
         {
@@ -115,6 +115,103 @@ int state_get_lowest_destination(struct state_t * state)
 
         if (value < result)
             result = value;
+    }
+
+    return result;
+}
+
+
+struct thread_args
+{
+    unsigned int seed_start,
+                 seed_end,
+                 result;
+    struct map_t * maps;
+    size_t map_size;
+};
+
+
+void * _thread_state_get_lowest_destination_range(void * _args)
+{
+    struct thread_args * args = (struct thread_args *)_args;
+
+    unsigned int result = UINT_MAX;
+
+    for (unsigned int seed = args->seed_start; seed < args->seed_end; seed++)
+    {
+        unsigned int value = seed;
+
+        for (size_t map_i = 0; map_i < args->map_size; map_i++)
+        {
+            struct map_t * map = &args->maps[map_i];
+            value = map_get_output(map, value);
+        }
+
+        if (value < result)
+            result = value;
+    }
+
+    args->result = result;
+
+    return NULL;
+}
+
+
+int state_get_lowest_destination_range(struct state_t * state)
+{
+    unsigned int result = UINT_MAX;
+    int i;
+
+    pthread_t threads[THREAD_COUNT];
+    struct thread_args args[THREAD_COUNT];
+
+    for (i = 0; i < THREAD_COUNT; i++)
+    {
+        args[i].maps = state->maps;
+        args[i].map_size = state->map_size;
+    }
+
+    for (size_t seed_i = 0; seed_i + 1 < state->seed_size; seed_i += 2)
+    {
+        unsigned int seed = state->seeds[seed_i];
+        unsigned int seed_range = state->seeds[seed_i + 1];
+
+        if (seed_range < THREAD_COUNT * 2)
+        {
+            args[i].seed_start = seed;
+            args[i].seed_end = seed + seed_range;
+            _thread_state_get_lowest_destination_range(&args[0]);
+
+            if (args[i].result < result)
+                result = args[i].result;
+        }
+
+        int thread_range = seed_range / THREAD_COUNT;
+
+        printf("start: %u, end: %u, range: %u\n", seed, seed + seed_range, seed_range);
+        /* generate threads */
+        for (i = 0; i < THREAD_COUNT - 1; i++)
+        {
+            args[i].seed_start = seed + i * thread_range;
+            args[i].seed_end = args[i].seed_start + thread_range;
+            args[i].result = UINT_MAX;
+            pthread_create(&threads[i], NULL,
+                    _thread_state_get_lowest_destination_range, &args[i]);
+        }
+
+        args[i].seed_start = seed + i * thread_range;
+        args[i].seed_end = seed + seed_range;
+        args[i].result = UINT_MAX;
+        pthread_create(&threads[i], NULL,
+                _thread_state_get_lowest_destination_range, &args[i]);
+
+        for (i = 0; i < THREAD_COUNT; i++)
+        {
+            pthread_join(threads[i], NULL);
+
+            if (args[i].result < result)
+                result = args[i].result;
+        }
     }
 
     return result;
@@ -280,7 +377,8 @@ int main(int argc, char **argv)
         get_line(&state, line, read_size);
     }
 
-    result = state_get_lowest_destination(&state);
+    // result = state_get_lowest_destination(&state);
+    result = state_get_lowest_destination_range(&state);
 
     free_state(&state);
     free(line);
